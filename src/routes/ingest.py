@@ -7,6 +7,10 @@ from .schemas.ingest import IngestRequest
 from controllers.AudioController import AudioController
 from models.UserModel import UserModel
 from .schemas.process import ProcessRequest
+from models.ChunkModel import ChunkModel
+from models.db_schemas import Chunk
+from controllers.ChunkController import ChunkController
+from models.enums.ResponseEnum import ResponseSignal
 
 
 ingest_router = APIRouter()
@@ -58,6 +62,9 @@ async def process_audio(request: Request, user_id: str, process_request: Process
     
     do_reset = process_request.do_reset
     youtube_url = process_request.youtube_url
+    chunk_size = process_request.chunk_size
+    overlap_size = process_request.overlap_size
+    
     video_user_id = user.id
 
     audio_path = video_controller.generate_audio_path(user_id)
@@ -87,15 +94,53 @@ async def process_audio(request: Request, user_id: str, process_request: Process
 
     if do_reset == 1:
         await video_model.delete_video_by_user_id(video_user_id)
-
+        
+    chunk_controller = ChunkController()
+    file_content = chunk_controller.get_file_content(transcript_path)
+    
+    file_chunks = chunk_controller.process_file_content(
+        file_content=file_content,
+        chunk_size=chunk_size,
+        overlap_size=overlap_size,
+    )
+    
+    if file_chunks is None or len(file_chunks) == 0:
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={
+                "signal": ResponseSignal.PROCESSING_FAILED.value
+            }
+        )
+      
+        
     video = await video_model.insert_video(
         Video(
             video_user_id=video_user_id,
             youtube_url=youtube_url,
             audio_path=audio_path,
-            transcript_path=transcript_path
+            transcript_path=transcript_path,
         )
     )
+        
+    file_chunks_docs = [
+        Chunk(
+            chunk_user_id=user.id,
+            chunk_video_id=video.id,
+            chunk_text=chunk.page_content,
+            chunk_metadata=chunk.metadata,
+            chunk_order=i+1  
+        )
+        for i, chunk in enumerate(file_chunks)
+    ]
+
+    chunk_model = ChunkModel(
+        db_client=request.app.db_client
+    )
+    
+    no_docs = await chunk_model.insert_many_chunks(
+        chunks=file_chunks_docs
+    )
+    
     
     return JSONResponse( 
         status_code=status.HTTP_200_OK,
@@ -105,7 +150,6 @@ async def process_audio(request: Request, user_id: str, process_request: Process
                 "download": d_signal,
                 "transcription": t_signal,
             }, 
-            "audio_path": audio_path, 
-            "transcript_path": transcript_path 
+            "no_docs": no_docs
             } 
     )
