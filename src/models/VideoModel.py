@@ -17,9 +17,9 @@ class VideoModel(BaseDataModel):
         
         return video
     
-    async def delete_video_by_user_id(self, user_id: str):
+    async def delete_video_by_user_id(self, video_user_id: ObjectId):
         result = await self.collection.delete_many({
-            'user_id': user_id
+            'video_user_id': video_user_id
         })
         
         return result.deleted_count

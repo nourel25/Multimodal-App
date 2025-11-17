@@ -6,6 +6,7 @@ from models.db_schemas import Video
 from .schemas.ingest import IngestRequest
 from controllers.AudioController import AudioController
 from models.UserModel import UserModel
+from .schemas.process import ProcessRequest
 
 
 ingest_router = APIRouter()
@@ -15,8 +16,7 @@ ingest_router = APIRouter()
 async def ingest_urls(request: Request, user_id: str, ingest_request: IngestRequest):
     data_controller = DataController()
 
-    youtube_url = str(ingest_request.url)
-    do_reset = ingest_request.do_reset
+    youtube_url = str(ingest_request.youtube_url)
 
     valid, v_signal = data_controller.validate_uploaded_video(youtube_url)
     
@@ -34,6 +34,32 @@ async def ingest_urls(request: Request, user_id: str, ingest_request: IngestRequ
         user_id=user_id
     )
         
+    
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={
+            "status": "success",
+            "signals": {
+                "validation": v_signal,
+            },
+            "video_user_id": str(user.id),
+            "youtube_url": youtube_url,
+        }
+    )
+
+
+@ingest_router.post("/process/{user_id}")
+async def process_audio(request: Request, user_id: str, process_request: ProcessRequest):
+        
+    data_controller = DataController()
+    user_model = UserModel(request.app.db_client)
+    
+    user = await user_model.get_user(user_id)
+    
+    do_reset = process_request.do_reset
+    youtube_url = process_request.youtube_url
+    video_user_id = user.id
+
     audio_path = data_controller.generate_audio_path(user_id)
 
     d_success, d_signal = data_controller.download_youtube_audio(youtube_url, audio_path)
@@ -60,28 +86,26 @@ async def ingest_urls(request: Request, user_id: str, ingest_request: IngestRequ
     video_model = VideoModel(request.app.db_client)
 
     if do_reset == 1:
-        await video_model.delete_video_by_user_id(user_id)
+        await video_model.delete_video_by_user_id(video_user_id)
 
     video = await video_model.insert_video(
         Video(
-            video_user_id=user.id,
+            video_user_id=video_user_id,
             youtube_url=youtube_url,
             audio_path=audio_path,
             transcript_path=transcript_path
         )
     )
     
-    return JSONResponse(
+    return JSONResponse( 
         status_code=status.HTTP_200_OK,
-        content={
-            "status": "success",
+        content={ 
+            "status": "success", 
             "signals": {
-                "validation": v_signal,
                 "download": d_signal,
-                "transcription": t_signal
-            },
-            "audio_path": audio_path,
-            "transcript_path": transcript_path
-        }
+                "transcription": t_signal,
+            }, 
+            "audio_path": audio_path, 
+            "transcript_path": transcript_path 
+            } 
     )
-
