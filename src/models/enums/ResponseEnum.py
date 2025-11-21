@@ -13,5 +13,8 @@ class ResponseSignal(Enum):
     USER_NOT_FOUND = "user_not_found"
     INSERT_INTO_VECTORDB_ERROR = "insert_into_vectordb_error"
     INSERT_INTO_VECTORDB_SUCCESS = "insert_into_vectordb_success"
+    VECTORDB_SEARCH_ERROR = "vectordb_search_error"
+    VECTORDB_SEARCH_SUCCESS = "vectordb_search_success"
+    
     
     

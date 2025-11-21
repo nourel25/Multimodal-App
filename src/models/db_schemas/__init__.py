@@ -1,3 +1,3 @@
 from .video import Video
 from .user import User
-from .chunk import Chunk
+from .chunk import Chunk, RetrievedDocument

@@ -9,7 +9,7 @@ from models.UserModel import UserModel
 from models.ChunkModel import ChunkModel
 
 # Request Schemas
-from .schemas.nlp import PushRequest
+from .schemas.nlp import PushRequest, SearchRequest
 
 # Enums
 from models.enums.ResponseEnum import ResponseSignal
@@ -77,11 +77,45 @@ async def index_user(request: Request, user_id: str, push_request: PushRequest):
             )
         
         inserted_items_count += len(page_chunks)
-        
+       
     return JSONResponse(
         content={
             "signal": ResponseSignal.INSERT_INTO_VECTORDB_SUCCESS.value,
             "inserted_items_count": inserted_items_count
         }
     )
-            
+    
+
+@nlp_router.post("/index/search/{user_id}")
+async def search_index(request: Request, user_id: str, search_request: SearchRequest):
+    
+    user_model = UserModel(
+        db_client=request.app.db_client
+    )
+    
+    user = await user_model.get_user(user_id)
+
+    nlp_controller = NLPController(
+        vectordb_client=request.app.vectordb_client,
+    )
+    
+    results = nlp_controller.search_vector_db_collection(
+        user=user,
+        text=search_request.text,
+        limit=search_request.limit
+    )
+    
+    if not results:
+        return JSONResponse(
+            status_code=status.HTTP_404_NOT_FOUND,
+            content={
+                "signal": ResponseSignal.VECTORDB_SEARCH_ERROR.value
+            }
+        )
+        
+    return JSONResponse(
+        content={
+            "signal": ResponseSignal.VECTORDB_SEARCH_SUCCESS.value,
+            "results": [ result.dict()  for result in results ]
+        }
+    )

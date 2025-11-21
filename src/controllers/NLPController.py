@@ -53,4 +53,30 @@ class NLPController(BaseController):
             record_ids=chunks_ids,
         )
 
+
         return True
+    
+    def search_vector_db_collection(self, user: User, text: str, limit: int = 3):
+        
+        # step1: get collection name
+        collection_name = self.create_collection_name(user_id=user.user_id)
+        
+        # step2: get text embedding vector
+        vector = self.embed_model.encode(text)
+        
+        if vector is None or vector.shape[0] == 0:
+            return False
+        
+        # step3: do sematic search
+        results = self.vectordb_client.search_by_vector(
+            collection_name=collection_name,
+            vector=vector.tolist(),
+            limit=limit,
+        )
+        
+        print(results)
+        
+        if not results:
+            return False
+        
+        return results

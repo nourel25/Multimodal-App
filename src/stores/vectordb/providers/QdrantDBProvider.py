@@ -3,6 +3,8 @@ from ..VectorDBInterface import VectorDBInterface
 from ..VectorDBEnums import DistanceMethodEnums
 from typing import List
 import logging
+from models.db_schemas.chunk import RetrievedDocument
+from qdrant_client.http.models import ScoredPoint
 
 
 class QdrantDBProvider(VectorDBInterface):
@@ -116,19 +118,34 @@ class QdrantDBProvider(VectorDBInterface):
             
 
             try:
-                _ = self.client.upload_records(
+                _ = self.client.upsert(
                     collection_name=collection_name,
-                    records=batch_records,
+                    points=batch_records,
                 )
             except Exception as e:
                 self.logger.error(f"Error while inserting batch: {e}")
                 return False
 
+        print(self.client.count(collection_name=collection_name))
+
         return True
     
     def search_by_vector(self, collection_name: str, vector: list, limit: int = 5):
-        return self.client.query_points(
+        results = self.client.query_points(
             collection_name=collection_name,
             query=vector,
-            limit=limit
+            limit=limit,
         ).points
+                
+        if not results and len(results) == 0:
+            return None
+        
+        print(results)
+        
+        return [
+            RetrievedDocument(
+                score=result.score,
+                text=result.payload.get("text", "")
+            )
+            for result in results
+        ]
