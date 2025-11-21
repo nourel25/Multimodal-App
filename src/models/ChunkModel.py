@@ -56,4 +56,20 @@ class ChunkModel(BaseDataModel):
         })
         
         return result.deleted_count
+    
+    async def get_user_chunks(self, user_id: ObjectId, 
+                                    page_no: int=1, page_size: int=50):
+        
+        cursor = self.collection.find({
+            "chunk_user_id": user_id
+        }).skip(
+            (page_no-1) * page_size
+        ).limit(page_size)
+        
+        docs = await cursor.to_list(length=None)
+        
+        return [
+            Chunk(**doc)
+            for doc in docs
+        ]
             

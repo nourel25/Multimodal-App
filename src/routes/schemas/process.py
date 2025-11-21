@@ -1,6 +1,5 @@
 from pydantic import BaseModel
 from typing import Optional
-from bson import ObjectId
 
 class ProcessRequest(BaseModel):
     do_reset: Optional[int] = 0

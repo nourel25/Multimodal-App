@@ -8,7 +8,7 @@ class VectorDBInterface(ABC):
         pass
     
     @abstractmethod
-    def diconnect(self):
+    def disconnect(self):
         pass
     
     @abstractmethod
