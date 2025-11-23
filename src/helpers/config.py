@@ -13,6 +13,12 @@ class Settings(BaseSettings):
     VECTOR_DB_PATH : str
     VECTOR_DB_DISTANCE_METHOD: str = None
     
+    PRIMARY_LANG: str = "ar"
+    DEFAULT_LANG: str = "ar"
+    
+    OLLAMA_HOST: str = "http://localhost:11434"
+
+    
     class Config:
         env_file = ".env"
         

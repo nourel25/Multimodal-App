@@ -39,6 +39,8 @@ async def index_user(request: Request, user_id: str, push_request: PushRequest):
         
     nlp_controller = NLPController(
         vectordb_client=request.app.vectordb_client,
+        template_parser=request.app.template_parser,
+        generation_client=request.app.generation_client
     )
     
     has_records = True
@@ -97,6 +99,8 @@ async def search_index(request: Request, user_id: str, search_request: SearchReq
 
     nlp_controller = NLPController(
         vectordb_client=request.app.vectordb_client,
+        template_parser=request.app.template_parser,
+        generation_client=request.app.generation_client
     )
     
     results = nlp_controller.search_vector_db_collection(
@@ -117,5 +121,43 @@ async def search_index(request: Request, user_id: str, search_request: SearchReq
         content={
             "signal": ResponseSignal.VECTORDB_SEARCH_SUCCESS.value,
             "results": [ result.dict()  for result in results ]
+        }
+    )
+    
+@nlp_router.post("/index/answer/{user_id}")
+async def answer_rag(request: Request, user_id: str, search_request: SearchRequest):
+    user_model = UserModel(
+        db_client=request.app.db_client
+    )
+    
+    user = await user_model.get_user(user_id)
+
+    nlp_controller = NLPController(
+        vectordb_client=request.app.vectordb_client,
+        template_parser=request.app.template_parser,
+        generation_client=request.app.generation_client
+    )
+        
+    answer, full_prompt, messages = nlp_controller.answer_rag_question(
+        user=user,
+        query=search_request.text,
+        limit=search_request.limit,
+        language=search_request.language,
+    )
+    
+    if not answer:
+        return JSONResponse(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                content={
+                    "signal": ResponseSignal.RAG_ANSWER_ERROR.value
+                }
+        )
+    
+    return JSONResponse(
+        content={
+            "signal": ResponseSignal.RAG_ANSWER_SUCCESS.value,
+            "answer": answer,
+            "full_prompt": full_prompt,
+            "chat_history": messages
         }
     )

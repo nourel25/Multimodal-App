@@ -11,7 +11,7 @@ class ChunkController(BaseController):
         return loader.load()
         
     def process_file_content(self, file_content: list, 
-                             chunk_size: int=100, overlap_size: int=20):
+                             chunk_size: int=100, overlap_size: int=25):
         
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=chunk_size,

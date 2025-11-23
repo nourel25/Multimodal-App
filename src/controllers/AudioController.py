@@ -19,7 +19,7 @@ class AudioController(BaseController):
     
     def transcribe_audio(self, audio_path: str, transcript_path: str):
         try:
-            segments, _ = self.model.transcribe(audio_path, language='ar')
+            segments, _ = self.model.transcribe(audio_path, language='en')
             transcript = " ".join([segment.text for segment in segments])
             
             with open(transcript_path, "w", encoding="utf-8") as f:
